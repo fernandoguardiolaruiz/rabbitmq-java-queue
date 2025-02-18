@@ -1,4 +1,4 @@
-# TRIGGLE JAVA QUEUE #
+# RABBITMQ JAVA QUEUE #
 
 ### What is ? ###
 
@@ -6,5 +6,6 @@ It’s a project that contains all neccesary classes, enumeration, interfaces an
 
 To execute 
 
-docker-compose up and maven test
+docker-compose up 
+maven test
 
