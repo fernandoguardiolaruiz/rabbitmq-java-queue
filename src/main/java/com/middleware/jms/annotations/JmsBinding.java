@@ -1,6 +1,5 @@
 package com.middleware.jms.annotations;
 
-import javax.jms.Session;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -8,13 +7,10 @@ import java.lang.annotation.Target;
 
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
-public @interface JmsProducer {
+public @interface JmsBinding {
 
-    boolean transacted() default false;
+    String routingKey() default "";
 
-    int acknoledgement() default Session.AUTO_ACKNOWLEDGE;
-
-    JmsBinding[] bindings() default {@JmsBinding};
-
+    String destinationQueue() default "";
 
 }

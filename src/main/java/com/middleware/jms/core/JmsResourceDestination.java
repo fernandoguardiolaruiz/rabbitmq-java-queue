@@ -38,4 +38,9 @@ public class JmsResourceDestination {
         return jmsDestination.destinationType();
     }
 
+    public JmsDestination getJmsDestination() {
+
+        return jmsDestination;
+    }
+
 }

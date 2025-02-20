@@ -64,14 +64,14 @@ public class JmsFactory {
                                 DestinationNamer.getDestinationSuffixName(jmsDestination), getBindingUrlForConsumer(jmsDestination));
                     } else if (annotation.isAssignableFrom(JmsProducer.class)) {
                         JmsProducer jmsProducer = (JmsProducer) clazz.getAnnotation(JmsProducer.class);
-                        Arrays.stream(jmsProducer.routingKey()).forEach(routingKey -> {
+                        Arrays.stream(jmsProducer.bindings()).forEach(binding -> {
                             try {
                                 destinationProperties.put(jmsDestination.destinationType().getReference() + "." +
-                                                getDestinationName(jmsDestination, routingKey),
-                                        getBindingUrlForProducer(jmsDestination, routingKey));
+                                                getDestinationName(jmsDestination, binding.routingKey()),
+                                        getBindingUrlForProducer(jmsDestination, binding.routingKey()));
                             } catch (JMSException ex) {
                                 logger.error("Can't create producer destination for " +
-                                        getRoutingKey(jmsDestination, routingKey));
+                                        getRoutingKey(jmsDestination, binding.routingKey()));
                             }
                         });
                     }
@@ -156,7 +156,7 @@ public class JmsFactory {
             }
             for (Class clazz : reflections.getTypesAnnotatedWith(JmsProducer.class)) {
                 JmsProducer jmsProducer = (JmsProducer) clazz.getAnnotation(JmsProducer.class);
-                jmsResources.addProducers(jmsResourceFactory.createProducers(clazz, jmsProducer.routingKey()));
+                jmsResources.addProducers(jmsResourceFactory.createProducers(clazz, jmsProducer.bindings()));
             }
             for (Class clazz : reflections.getTypesAnnotatedWith(JmsConsumer.class)) {
                 jmsResources.addConsumers(jmsResourceFactory.createConsumers(clazz));

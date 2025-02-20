@@ -1,5 +1,12 @@
 package com.middleware.jms.core;
 
+import com.middleware.jms.annotations.JmsBinding;
+import com.middleware.jms.annotations.JmsConsumer;
+import com.middleware.jms.annotations.JmsDestination;
+import com.middleware.jms.annotations.JmsErrorHandler;
+import com.middleware.jms.annotations.JmsHandler;
+import com.middleware.jms.annotations.JmsListener;
+import com.middleware.jms.annotations.JmsProducer;
 import com.middleware.jms.annotations.listener.JmsAll;
 import com.middleware.jms.annotations.listener.JmsAllConsumers;
 import com.middleware.jms.annotations.listener.JmsAllProducers;
@@ -15,12 +22,6 @@ import com.middleware.jms.core.resource.handler.JmsHandlerResource;
 import com.middleware.jms.core.resource.handler.JmsResourceErrorHandler;
 import com.middleware.jms.core.resource.listener.JmsResourceListener;
 import com.middleware.jms.core.resource.producer.JmsProducerResource;
-import com.middleware.jms.annotations.JmsConsumer;
-import com.middleware.jms.annotations.JmsDestination;
-import com.middleware.jms.annotations.JmsErrorHandler;
-import com.middleware.jms.annotations.JmsHandler;
-import com.middleware.jms.annotations.JmsListener;
-import com.middleware.jms.annotations.JmsProducer;
 import org.apache.commons.pool2.ObjectPool;
 import org.apache.commons.pool2.impl.GenericObjectPool;
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
@@ -46,6 +47,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+
+import static com.middleware.jms.core.destination.type.DestinationNamer.getDestinationSuffixName;
 
 @Component(value = "JmsResourceFactory")
 public class JmsResourceFactory implements ApplicationContextAware {
@@ -103,8 +106,8 @@ public class JmsResourceFactory implements ApplicationContextAware {
                 JmsListener jmsListener = clazzListener.getAnnotation(JmsListener.class);
                 L jmsRsourceListener = getInstance(clazzListener);
                 resources.stream().filter(r -> jmsListener.value().isAssignableFrom(JmsAll.class) ||
-                        mathClazzAnnotationCorresponding(r, jmsListener.value())
-                        || r.getClass().isAnnotationPresent(jmsListener.value()))
+                                mathClazzAnnotationCorresponding(r, jmsListener.value())
+                                || r.getClass().isAnnotationPresent(jmsListener.value()))
                         .forEach(r -> r.addJmsResourceListeners(jmsRsourceListener));
                 return jmsRsourceListener;
             } catch (Exception ex) {
@@ -123,8 +126,8 @@ public class JmsResourceFactory implements ApplicationContextAware {
                 JmsErrorHandler jmsErrorHandler = clazzErrorHandler.getAnnotation(JmsErrorHandler.class);
                 E jmsErrorHandlerResource = getInstance(clazzErrorHandler);
                 resources.stream().filter(r -> jmsErrorHandler.value().isAssignableFrom(JmsAll.class) ||
-                        mathClazzAnnotationCorresponding(r, jmsErrorHandler.value())
-                        || r.getClass().isAnnotationPresent(jmsErrorHandler.value()))
+                                mathClazzAnnotationCorresponding(r, jmsErrorHandler.value())
+                                || r.getClass().isAnnotationPresent(jmsErrorHandler.value()))
                         .forEach(r -> r.addJmsErrorHandlerResource(jmsErrorHandlerResource));
                 return jmsErrorHandlerResource;
             } catch (Exception ex) {
@@ -169,13 +172,13 @@ public class JmsResourceFactory implements ApplicationContextAware {
         });
     }
 
-    public <T extends JmsResource> List<T> createProducers(Class<T> clazz, String[] routingKeys) {
+    public <T extends JmsResource> List<T> createProducers(Class<T> clazz, JmsBinding[] bindings) {
 
-        return (List) Arrays.stream(routingKeys).map(routingKey -> {
+        return (List) Arrays.stream(bindings).map(binding -> {
             JmsProducer jmsProducer = clazz.getAnnotation(JmsProducer.class);
             JmsResourceDestination jmsResourceDestination = null;
             try {
-                jmsResourceDestination = dicoverJmsResourceDestination(clazz, JmsProducer.class, routingKey);
+                jmsResourceDestination = dicoverJmsResourceDestination(clazz, JmsProducer.class, binding.routingKey());
             } catch (Exception ex) {
                 logger.error("Error discovering detination jms for: " + clazz.getSimpleName(), ex);
             }
@@ -189,7 +192,8 @@ public class JmsResourceFactory implements ApplicationContextAware {
                     jmsProducerResource = (JmsProducerResource) clazz
                             .getConstructor(String.class, ObjectPool.class, JmsSessionParameters.class,
                                     JmsResourceDestination.class, Class.class)
-                            .newInstance(getRoutingKey(jmsResourceDestination.getDestinationName(), routingKey),
+                            .newInstance(
+                                    getRoutingKey(jmsResourceDestination.getDestinationName(), binding.routingKey()),
                                     connectionPool, jmsSessionParameters, jmsResourceDestination, genericType);
                 } else {
                     jmsProducerResource = (JmsProducerResource) applicationContext.getBean(clazz);
@@ -198,12 +202,14 @@ public class JmsResourceFactory implements ApplicationContextAware {
                     jmsProducerResource.setJmsResourceDestination(jmsResourceDestination);
                     jmsProducerResource.setClazz(genericType);
                     jmsProducerResource
-                            .setRoutingKey(getRoutingKey(jmsResourceDestination.getDestinationName(), routingKey));
+                            .setRoutingKey(getRoutingKey(jmsResourceDestination.getDestinationName(),
+                                    binding.routingKey()));
                 }
                 return jmsProducerResource;
             } catch (Exception ex) {
                 logger.error(
-                        "Can't create producer for class " + clazz.getSimpleName() + " and routingKey " + routingKey);
+                        "Can't create producer for class " + clazz.getSimpleName() + " and routingKey " +
+                                binding.routingKey());
             }
             return jmsProducerResource;
         }).filter(Objects::nonNull).collect(Collectors.toList());
@@ -291,12 +297,13 @@ public class JmsResourceFactory implements ApplicationContextAware {
     private <T extends JmsResource> Destination getDestinationQueue(
             JmsDestination jmsDestination) throws NamingException {
 
-        return (Destination) initialContext.lookup(DestinationNamer.getDestinationSuffixName(jmsDestination));
+        return (Destination) initialContext.lookup(getDestinationSuffixName(jmsDestination));
     }
 
-    private <T extends JmsResource> Destination getDestinationTopic(String topicName,String routingkey) throws NamingException {
+    private <T extends JmsResource> Destination getDestinationTopic(String topicName,
+                                                                    String routingkey) throws NamingException {
 
-        return (Destination) initialContext.lookup(topicName+"_" + routingkey);
+        return (Destination) initialContext.lookup(topicName + "_" + routingkey);
     }
 
     private <T> T getInstance(Class<T> clazz) {

@@ -1,6 +1,7 @@
 package com.middleware.jms.resources.topic;
 
 
+import com.middleware.jms.annotations.JmsBinding;
 import com.middleware.jms.annotations.JmsDestination;
 import com.middleware.jms.annotations.JmsProducer;
 import com.middleware.jms.connection.JmsConnection;
@@ -11,7 +12,7 @@ import com.middleware.jms.message.TestingMessage;
 import com.middleware.jms.core.JmsResourceDestination;
 import org.apache.commons.pool2.ObjectPool;
 
-@JmsProducer(routingKey = {"news.uk", "news.es"})
+@JmsProducer(bindings = {@JmsBinding(routingKey = "news.uk"), @JmsBinding(routingKey = "news.es")})
 @JmsDestination(name = "amq.topic", schema = "topic", exchange = "amq.topic", destinationType = DestinationType.TOPIC)
 public class JmsProducerNewsWorld extends JmsProducerResource<TestingMessage> {
 
